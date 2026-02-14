@@ -1,0 +1,44 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# TensorFlow / Keras (model dosyaları repoda tutuluyor; .keras/.h5 ignore edilmiyor)
+.keras/
+tf_logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific: large or generated (uncomment if you don't want to commit them)
+# egitim_verisi_regresyon.csv
+# referans_dagilimlari.json
+# dataset/
+# mikro_ifade_data/*.png
+
+# Output / logs
+*.log
+yalan_tespit_sonuclari_*.txt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Distribution / build
+build/
+dist/
+*.egg-info/
+*.egg
