@@ -1,0 +1,19 @@
+
+
+
+Sistemi (yani mikro ifade regresyon modelini) yeniden eğitmek için aşağıdaki adımları takip etmelisin:
+Yeni Veri Topla veya Dataset’i Güncelle
+dataset/1/soruX_dogru/ klasörlerine doğru cevap veren kişilerin yüz görüntülerini (frame_000.jpg, frame_001.jpg, ...) ekle.
+dataset/1/soruX_yalan/ klasörlerine yalan söyleyen kişilerin yüz görüntülerini ekle.
+Her soru için mümkün olduğunca fazla ve çeşitli yüz görüntüsü olması modelin başarısını artırır.
+Duygu Vektörlerini Hazırla
+      python veri_hazirla.py
+Bu script, dataset’teki tüm yüz görüntülerinden DeepFace ile duygu vektörlerini çıkarır ve egitim_verisi_regresyon.csv dosyasını oluşturur.
+Modeli Eğit
+      python model_egit.py
+Bu script, egitim_verisi_regresyon.csv dosyasını kullanarak yeni bir yapay sinir ağı (regresyon modeli) eğitir.
+Eğitim sonunda model dosyaları (mikro_ifade_model_regresyon.keras vb.) ve eğitim grafikleri (model_egitim_grafigi.png, tahmin_vs_gercek.png) oluşur.
+4. Uygulamayı Kullan
+Artık ana uygulamayı (main.py) çalıştırabilirsin
+      python main.py
+Sistem, yeni eğitilmiş modeli otomatik olarak yükler ve analizlerde kullanır.
