@@ -11,6 +11,7 @@ import tensorflow as tf
 # ve bu, Keras 3 ile kaydedilmiş .keras modelinin yüklenmesini bozuyor)
 import keras
 import cv2
+import tema
 import pandas as pd
 import numpy as np
 from PyQt5.QtWidgets import *
@@ -54,360 +55,227 @@ class YalanTespitSistemi(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Mikro İfade Yalan Tespit Sistemi")
-        self.setGeometry(100, 100, 1200, 800)  # Boyutu küçülttüm
-        self.setStyleSheet("""
-            QMainWindow {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #667eea, stop:0.5 #764ba2, stop:1 #f093fb);
-            }
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #e1e8ed;  /* Kenarlık kalınlığını azalttım */
-                border-radius: 10px;  /* Köşe yuvarlaklığını azalttım */
-                margin-top: 10px;  /* Üst boşluğu azalttım */
-                padding-top: 10px;  /* İç üst boşluğu azalttım */
-                background-color: rgba(255, 255, 255, 0.98);
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;  /* Sol boşluğu azalttım */
-                padding: 0 8px 0 8px;  /* Padding'i azalttım */
-                color: #2c3e50;
-                font-size: 14px;  /* Font boyutunu küçülttüm */
-                font-weight: bold;
-            }
-            QLabel {
-                color: #2c3e50;
-                font-size: 12px;  /* Font boyutunu küçülttüm */
-            }
-            QLineEdit, QSpinBox, QComboBox {
-                padding: 8px;  /* Padding'i azalttım */
-                border: 2px solid #e1e8ed;  /* Kenarlık kalınlığını azalttım */
-                border-radius: 8px;  /* Köşe yuvarlaklığını azalttım */
-                background-color: white;
-                font-size: 12px;  /* Font boyutunu küçülttüm */
-                font-weight: 500;
-                selection-background-color: #3498db;
-            }
-            QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
-                border-color: #3498db;
-                background-color: #f8f9fa;
-            }
-            QLineEdit:hover, QSpinBox:hover, QComboBox:hover {
-                border-color: #bdc3c7;
-            }
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #3498db, stop:1 #2980b9);
-                color: white;
-                border: none;
-                padding: 10px 20px;  /* Padding'i azalttım */
-                border-radius: 8px;  /* Köşe yuvarlaklığını azalttım */
-                font-size: 13px;  /* Font boyutunu küçülttüm */
-                font-weight: bold;
-                min-width: 100px;  /* Minimum genişliği azalttım */
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #2980b9, stop:1 #1f5f8b);
-            }
-            QPushButton:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #1f5f8b, stop:1 #154360);
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-            #titleLabel {
-                font-size: 24px;  /* Font boyutunu küçülttüm */
-                font-weight: bold;
-                color: white;
-                padding: 15px;  /* Padding'i azalttım */
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 15px;
-                margin: 8px;  /* Margin'i azalttım */
-            }
-            #statusLabel {
-                font-size: 13px;  /* Font boyutunu küçülttüm */
-                color: #27ae60;
-                font-weight: bold;
-                padding: 10px;  /* Padding'i azalttım */
-                background-color: rgba(39, 174, 96, 0.1);
-                border-radius: 8px;  /* Köşe yuvarlaklığını azalttım */
-                border: 2px solid #27ae60;  /* Kenarlık kalınlığını azalttım */
-                margin: 8px;  /* Margin'i azalttım */
-            }
-            #cameraFrame {
-                border: 3px solid #34495e;  /* Kenarlık kalınlığını azalttım */
-                border-radius: 10px;  /* Köşe yuvarlaklığını azalttım */
-                background-color: #2c3e50;
-            }
-            #questionLabel {
-                font-size: 15px;  /* Font boyutunu küçülttüm */
-                color: #2c3e50;
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 rgba(52, 152, 219, 0.1), stop:1 rgba(52, 152, 219, 0.05));
-                padding: 15px;  /* Padding'i azalttım */
-                border-radius: 10px;  /* Köşe yuvarlaklığını azalttım */
-                border-left: 4px solid #3498db;  /* Sol kenarlık kalınlığını azalttım */
-                margin: 8px;  /* Margin'i azalttım */
-            }
-            QProgressBar {
-                border: 2px solid #e1e8ed;  /* Kenarlık kalınlığını azalttım */
-                border-radius: 8px;  /* Köşe yuvarlaklığını azalttım */
-                text-align: center;
-                font-weight: bold;
-                font-size: 12px;  /* Font boyutunu küçülttüm */
-                background-color: #f8f9fa;
-            }
-            QProgressBar::chunk {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #27ae60, stop:1 #2ecc71);
-                border-radius: 6px;  /* Köşe yuvarlaklığını azalttım */
-                margin: 1px;  /* Margin'i azalttım */
-            }
-            QScrollBar:vertical {
-                background-color: #f1f3f4;
-                width: 12px;  /* Genişliği azalttım */
-                border-radius: 6px;  /* Köşe yuvarlaklığını azalttım */
-            }
-            QScrollBar::handle:vertical {
-                background-color: #dadce0;
-                border-radius: 6px;  /* Köşe yuvarlaklığını azalttım */
-                min-height: 25px;  /* Minimum yüksekliği azalttım */
-            }
-            QScrollBar::handle:vertical:hover {
-                background-color: #bdc1c6;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-        """)
-        
+        self.setGeometry(100, 100, 1280, 840)
+        self.setMinimumSize(1100, 720)
+        self.setStyleSheet(tema.tema_qss())
+
         # Ana widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(15)  # Boşlukları azalttım
-        main_layout.setContentsMargins(25, 25, 25, 25)  # Kenar boşluklarını azalttım
-        
-        # Başlık
+        main_layout.setSpacing(18)
+        main_layout.setContentsMargins(28, 22, 28, 24)
+
+        # Üst başlık alanı
+        ust_layout = QHBoxLayout()
+        baslik_kutu = QVBoxLayout()
+        baslik_kutu.setSpacing(2)
         title = QLabel("🔍 Mikro İfade Yalan Tespit Sistemi")
-        title.setObjectName("titleLabel")
-        title.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title)
-        
-        # Alt başlık
-        subtitle = QLabel("Yapay Zeka Destekli Psikolojik Analiz Sistemi")
-        subtitle.setStyleSheet("""
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 13px;  /* Font boyutunu küçülttüm */
-            font-weight: 500;
-            text-align: center;
-            margin: 5px;  /* Margin'i azalttım */
-        """)
-        subtitle.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(subtitle)
-        
+        title.setObjectName("baslik")
+        baslik_kutu.addWidget(title)
+        subtitle = QLabel("Yapay zeka destekli analiz  •  Mikro ifadeler + psikolojik sorular")
+        subtitle.setObjectName("altBaslik")
+        baslik_kutu.addWidget(subtitle)
+        ust_layout.addLayout(baslik_kutu)
+        ust_layout.addStretch()
+        rozet = QLabel("Araştırma prototipi")
+        rozet.setObjectName("rozet")
+        rozet.setToolTip("Yüz ifadesinden yalan tespiti bilimsel olarak kesin değildir.")
+        ust_layout.addWidget(rozet, 0, Qt.AlignVCenter)
+        main_layout.addLayout(ust_layout)
+
         # Ana içerik alanı
         content_widget = QWidget()
         content_layout = QHBoxLayout(content_widget)
-        content_layout.setSpacing(20)  # Boşluğu azalttım
-        
+        content_layout.setSpacing(20)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+
         # Sol panel - Kullanıcı bilgileri ve kontroller
         left_panel = QWidget()
-        left_panel.setMaximumWidth(350)  # Genişliği azalttım
+        left_panel.setFixedWidth(340)
         left_layout = QVBoxLayout(left_panel)
-        left_layout.setSpacing(15)  # Boşluğu azalttım
-        
+        left_layout.setSpacing(14)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+
         # Kullanıcı bilgileri
-        self.user_info_group = QGroupBox("👤 Kullanıcı Bilgileri")
+        self.user_info_group = QGroupBox("KULLANICI BİLGİLERİ")
         user_layout = QFormLayout()
-        user_layout.setSpacing(10)  # Boşluğu azalttım
+        user_layout.setSpacing(12)
         user_layout.setLabelAlignment(Qt.AlignLeft)
-        
+        user_layout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+
         self.ad_soyad = QLineEdit()
         self.ad_soyad.setPlaceholderText("Adınız ve soyadınız")
-        self.ad_soyad.setMinimumHeight(35)  # Yüksekliği azalttım
-        user_layout.addRow("📝 Ad Soyad:", self.ad_soyad)
-        
+        user_layout.addRow("Ad Soyad", self.ad_soyad)
+
         self.yas = QSpinBox()
         self.yas.setRange(18, 100)
         self.yas.setValue(25)
-        self.yas.setMinimumHeight(35)  # Yüksekliği azalttım
-        user_layout.addRow("🎂 Yaş:", self.yas)
-        
+        self.yas.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        user_layout.addRow("Yaş", self.yas)
+
         self.meslek = QLineEdit()
         self.meslek.setPlaceholderText("Mesleğiniz")
-        self.meslek.setMinimumHeight(35)  # Yüksekliği azalttım
-        user_layout.addRow("💼 Meslek:", self.meslek)
-        
+        user_layout.addRow("Meslek", self.meslek)
+
         self.cinsiyet = QComboBox()
         self.cinsiyet.addItems(["Erkek", "Kadın"])
-        self.cinsiyet.setMinimumHeight(35)  # Yüksekliği azalttım
-        user_layout.addRow("👥 Cinsiyet:", self.cinsiyet)
-        
+        user_layout.addRow("Cinsiyet", self.cinsiyet)
+
+        for alan in (self.ad_soyad, self.yas, self.meslek, self.cinsiyet):
+            alan.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         self.user_info_group.setLayout(user_layout)
         left_layout.addWidget(self.user_info_group)
-        
+
         # Test başlat butonu
-        self.test_baslat = QPushButton("🚀 Test Başlat")
-        self.test_baslat.setMinimumHeight(45)  # Yüksekliği azalttım
+        self.test_baslat = QPushButton("🚀  Testi Başlat")
+        self.test_baslat.setMinimumHeight(48)
+        self.test_baslat.setCursor(Qt.PointingHandCursor)
         self.test_baslat.clicked.connect(self.test_baslat_clicked)
         left_layout.addWidget(self.test_baslat)
-        
+
         # Durum göstergesi
         self.status_label = QLabel("✅ Sistem hazır. Test başlatmak için bilgileri doldurun.")
         self.status_label.setObjectName("statusLabel")
+        self.status_label.setWordWrap(True)
         self.status_label.setAlignment(Qt.AlignCenter)
         left_layout.addWidget(self.status_label)
-        
+
         # Test kontrol butonları
-        self.control_group = QGroupBox("🎮 Test Kontrolleri")
+        self.control_group = QGroupBox("TEST KONTROLLERİ")
         control_layout = QVBoxLayout()
-        control_layout.setSpacing(10)  # Boşluğu azalttım
-        
-        self.test_durdur_btn = QPushButton("⏸️ Test Durdur")
-        self.test_durdur_btn.setMinimumHeight(40)  # Yüksekliği azalttım
+        control_layout.setSpacing(10)
+
+        self.test_durdur_btn = QPushButton("⏸️  Testi Durdur")
+        self.test_durdur_btn.setObjectName("ikincil")
+        self.test_durdur_btn.setMinimumHeight(42)
         self.test_durdur_btn.clicked.connect(self.test_durdur)
         self.test_durdur_btn.hide()
         control_layout.addWidget(self.test_durdur_btn)
-        
-        self.devam_et_btn = QPushButton("▶️ Devam Et")
-        self.devam_et_btn.setMinimumHeight(40)  # Yüksekliği azalttım
+
+        self.devam_et_btn = QPushButton("▶️  Devam Et")
+        self.devam_et_btn.setMinimumHeight(42)
         self.devam_et_btn.clicked.connect(self.test_devam_et)
         self.devam_et_btn.hide()
         control_layout.addWidget(self.devam_et_btn)
-        
-        self.sonuc_buton = QPushButton("📊 Sonuçları Göster")
-        self.sonuc_buton.setMinimumHeight(40)  # Yüksekliği azalttım
+
+        self.sonuc_buton = QPushButton("📊  Sonuçları Göster")
+        self.sonuc_buton.setObjectName("basari")
+        self.sonuc_buton.setMinimumHeight(44)
         self.sonuc_buton.clicked.connect(self.sonuc_goster)
         self.sonuc_buton.hide()
         control_layout.addWidget(self.sonuc_buton)
-        
-        self.yeni_test_btn = QPushButton("🔄 Aynı Kişi - Yeni Test")
-        self.yeni_test_btn.setMinimumHeight(40)  # Yüksekliği azalttım
+
+        self.yeni_test_btn = QPushButton("🔄  Aynı Kişi – Yeni Test")
+        self.yeni_test_btn.setObjectName("ikincil")
+        self.yeni_test_btn.setMinimumHeight(42)
         self.yeni_test_btn.clicked.connect(self.yeni_test_baslat)
         self.yeni_test_btn.hide()
         control_layout.addWidget(self.yeni_test_btn)
-        
-        self.yeni_kayit_btn = QPushButton("👤 Yeni Kişi - Yeni Kayıt")
-        self.yeni_kayit_btn.setMinimumHeight(40)  # Yüksekliği azalttım
+
+        self.yeni_kayit_btn = QPushButton("👤  Yeni Kişi – Yeni Kayıt")
+        self.yeni_kayit_btn.setObjectName("ikincil")
+        self.yeni_kayit_btn.setMinimumHeight(42)
         self.yeni_kayit_btn.clicked.connect(self.yeni_kayit_baslat)
         self.yeni_kayit_btn.hide()
         control_layout.addWidget(self.yeni_kayit_btn)
-        
+
         self.control_group.setLayout(control_layout)
+        self.control_group.hide()  # Test başlayınca gösterilir
         left_layout.addWidget(self.control_group)
-        
+
         # İlerleme çubuğu
-        self.progress_group = QGroupBox("📈 Test İlerlemesi")
+        self.progress_group = QGroupBox("TEST İLERLEMESİ")
         progress_layout = QVBoxLayout()
-        progress_layout.setSpacing(10)  # Boşluğu azalttım
-        
+        progress_layout.setSpacing(8)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 15)
         self.progress_bar.setValue(0)
-        self.progress_bar.setMinimumHeight(25)  # Yüksekliği azalttım
         progress_layout.addWidget(self.progress_bar)
-        
+
         self.progress_label = QLabel("0 / 15 soru tamamlandı")
+        self.progress_label.setObjectName("ilerlemeYazi")
         self.progress_label.setAlignment(Qt.AlignCenter)
-        self.progress_label.setStyleSheet("font-size: 12px; font-weight: bold; color: #2c3e50;")  # Font boyutunu küçülttüm
         progress_layout.addWidget(self.progress_label)
-        
+
         self.progress_group.setLayout(progress_layout)
         left_layout.addWidget(self.progress_group)
-        
+        left_layout.addStretch()
+
         # Sol paneli ana layout'a ekle
         content_layout.addWidget(left_panel)
-        
+
         # Sağ panel - Kamera ve soru alanı
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setSpacing(15)  # Boşluğu azalttım
-        
-        # Kamera görüntüsü
-        camera_group = QGroupBox("📹 Kamera Görüntüsü")
+        right_layout.setSpacing(16)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Kamera görüntüsü (pencereyle birlikte büyür, görüntü ortalanır)
+        camera_group = QGroupBox("CANLI KAMERA")
         camera_layout = QVBoxLayout()
-        camera_layout.setSpacing(8)  # Boşluğu azalttım
-        
+        camera_layout.setContentsMargins(0, 4, 0, 0)
+
         self.kamera_label = QLabel()
         self.kamera_label.setObjectName("cameraFrame")
-        self.kamera_label.setMinimumSize(480, 360)  # Boyutu küçülttüm
-        self.kamera_label.setMaximumSize(480, 360)  # Maksimum boyut ekledim
+        self.kamera_label.setMinimumSize(480, 320)
+        self.kamera_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.kamera_label.setAlignment(Qt.AlignCenter)
-        self.kamera_label.setText("📹 Kamera başlatılıyor...")
-        self.kamera_label.setStyleSheet("color: white; font-size: 14px; font-weight: bold;")  # Font boyutunu küçülttüm
+        self.kamera_label.setText("📹  Kamera, test başladığında açılacak")
         camera_layout.addWidget(self.kamera_label)
-        
+
         camera_group.setLayout(camera_layout)
-        right_layout.addWidget(camera_group)
-        
+        right_layout.addWidget(camera_group, 1)
+
         # Soru grubu
-        self.soru_group = QGroupBox("❓ Soru")
+        self.soru_group = QGroupBox("SORU")
         soru_layout = QVBoxLayout()
-        soru_layout.setSpacing(15)  # Boşluğu azalttım
-        
+        soru_layout.setSpacing(10)
+
+        self.soru_no_label = QLabel("SORU 1 / 15")
+        self.soru_no_label.setObjectName("soruNo")
+        soru_layout.addWidget(self.soru_no_label, 0, Qt.AlignLeft)
+
         self.soru_label = QLabel()
         self.soru_label.setObjectName("questionLabel")
         self.soru_label.setWordWrap(True)
-        self.soru_label.setMinimumHeight(80)  # Yüksekliği azalttım
+        self.soru_label.setMinimumHeight(60)
         soru_layout.addWidget(self.soru_label)
-        
+
         # Cevap butonları
         cevap_layout = QHBoxLayout()
-        cevap_layout.setSpacing(20)  # Boşluğu azalttım
-        
-        self.evet_buton = QPushButton("✅ Evet")
-        self.evet_buton.setMinimumHeight(45)  # Yüksekliği azalttım
-        self.evet_buton.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #27ae60, stop:1 #229954);
-                font-size: 16px;  /* Font boyutunu küçülttüm */
-                font-weight: bold;
-                padding: 10px 25px;  /* Padding'i azalttım */
-                border-radius: 10px;  /* Köşe yuvarlaklığını azalttım */
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #229954, stop:1 #1e8449);
-            }
-        """)
+        cevap_layout.setSpacing(16)
+
+        self.evet_buton = QPushButton("✓  Evet")
+        self.evet_buton.setObjectName("evet")
+        self.evet_buton.setMinimumHeight(54)
+        self.evet_buton.setCursor(Qt.PointingHandCursor)
+        self.evet_buton.setShortcut("E")
+        self.evet_buton.setToolTip("Kısayol: E")
         self.evet_buton.clicked.connect(lambda: self.cevap_ver("Evet"))
         cevap_layout.addWidget(self.evet_buton)
-        
-        self.hayir_buton = QPushButton("❌ Hayır")
-        self.hayir_buton.setMinimumHeight(45)  # Yüksekliği azalttım
-        self.hayir_buton.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #e74c3c, stop:1 #c0392b);
-                font-size: 16px;  /* Font boyutunu küçülttüm */
-                font-weight: bold;
-                padding: 10px 25px;  /* Padding'i azalttım */
-                border-radius: 10px;  /* Köşe yuvarlaklığını azalttım */
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #c0392b, stop:1 #a93226);
-            }
-        """)
+
+        self.hayir_buton = QPushButton("✕  Hayır")
+        self.hayir_buton.setObjectName("hayir")
+        self.hayir_buton.setMinimumHeight(54)
+        self.hayir_buton.setCursor(Qt.PointingHandCursor)
+        self.hayir_buton.setShortcut("H")
+        self.hayir_buton.setToolTip("Kısayol: H")
         self.hayir_buton.clicked.connect(lambda: self.cevap_ver("Hayır"))
         cevap_layout.addWidget(self.hayir_buton)
-        
+
         soru_layout.addLayout(cevap_layout)
         self.soru_group.setLayout(soru_layout)
         self.soru_group.hide()
         right_layout.addWidget(self.soru_group)
-        
+
         # Sağ paneli ana layout'a ekle
-        content_layout.addWidget(right_panel)
-        
+        content_layout.addWidget(right_panel, 1)
+
         # Ana içerik alanını ana layout'a ekle
-        main_layout.addWidget(content_widget)
+        main_layout.addWidget(content_widget, 1)
         
         # Değişkenler
         self.kamera = None
@@ -838,8 +706,12 @@ class YalanTespitSistemi(QMainWindow):
                 self.cap = None
             
             # Tüm kamera kaynaklarını temizle
-            cv2.destroyAllWindows()
-            
+            # (OpenCV "headless" sürümünde bu çağrı desteklenmez; arayüz Qt olduğundan önemsiz)
+            try:
+                cv2.destroyAllWindows()
+            except cv2.error:
+                pass
+
             print("✅ Kamera kaynakları temizlendi")
             
         except Exception as e:
@@ -999,7 +871,8 @@ class YalanTespitSistemi(QMainWindow):
     def soru_goster(self):
         if self.soru_index < len(self.secili_sorular):
             soru = self.secili_sorular[self.soru_index]
-            self.soru_label.setText(f"<b>Soru {self.soru_index + 1}:</b><br>{soru}")
+            self.soru_label.setText(soru)
+            self.soru_no_label.setText(f"SORU {self.soru_index + 1} / {len(self.secili_sorular)}")
             self.soru_group.show()
             
             # İlerleme çubuğunu güncelle
@@ -1207,6 +1080,17 @@ class YalanTespitSistemi(QMainWindow):
         similarity = dot_product / (norm_test * norm_ref)
         return similarity
 
+    @staticmethod
+    def duygu_ozeti(duygular, adet=3):
+        """Duygu sözlüğünü en baskın birkaç duyguyla okunaklı bir özete çevirir."""
+        ceviri = {'angry': 'kızgın', 'disgust': 'iğrenme', 'fear': 'korku', 'happy': 'mutlu',
+                  'sad': 'üzgün', 'surprise': 'şaşkın', 'neutral': 'nötr'}
+        try:
+            sirali = sorted(duygular.items(), key=lambda kv: kv[1], reverse=True)[:adet]
+            return ", ".join(f"{ceviri.get(ad, ad)} %{deger:.1f}" for ad, deger in sirali if deger >= 0.05) or "—"
+        except Exception:
+            return str(duygular)
+
     def demo_gorsel_analiz(self):
         """Demo.png'deki yüzleri analiz eder ve sonuçları döndürür."""
         try:
@@ -1259,15 +1143,13 @@ class YalanTespitSistemi(QMainWindow):
             if demo_analizler:
                 for analiz in demo_analizler:
                     mesaj += f"   👤 Yüz {analiz['yuz_no']}:\n"
-                    mesaj += f"      Duygular: {analiz['duygular']}\n"
+                    mesaj += f"      Duygular: {self.duygu_ozeti(analiz['duygular'])}\n"
                     mikro = analiz['mikro_sonuc']
                     if mikro:
                         mesaj += f"      Klasik Tahmin: <b>{mikro['tahmin'].upper()}</b> (%{mikro['güven_orani']*100:.1f})\n"
                         mesaj += f"      Yalan Oranı (Klasik): %{mikro['yalan_orani']*100:.1f} | Doğru Oranı: %{mikro['dogru_orani']*100:.1f}\n"
                         if mikro['regresyon_kullanildi']:
                             mesaj += f"      🤖 Regresyon Tahmin: <b>{mikro['regresyon_tahmin'].upper()}</b> (Yalan Olasılığı: %{mikro['regresyon_yuzde']:.1f}) | Güven: %{mikro['regresyon_güven']*100:.1f}\n"
-                    else:
-                        mesaj += "      Analiz yapılamadı\n"
                     if kullanici_ort_vektor is not None:
                         demo_vektor = analiz['vektor']
                         similarity = self.dagilim_benzerligi_hesapla(kullanici_ort_vektor, demo_vektor)
@@ -1383,124 +1265,94 @@ class YalanTespitSistemi(QMainWindow):
                 else:
                     mesaj += f"🎯 <b>GENEL KARAR: YALAN SÖYLÜYORSUNUZ</b>\n"
             # Sonuçları ayrı bir pencerede göster
-            result_dialog = QDialog(self)
-            result_dialog.setWindowTitle("🔍 Kapsamlı Yalan Tespit Analizi")
-            result_dialog.setGeometry(200, 200, 1200, 900)
-            result_dialog.setStyleSheet("""
-                QDialog {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                        stop:0 #f8f9fa, stop:1 #e9ecef);
-                }
-                QTextEdit {
-                    background-color: white;
-                    border: 3px solid #dee2e6;
-                    border-radius: 15px;
-                    padding: 20px;
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    font-size: 13px;
-                    line-height: 1.6;
-                }
-                QScrollBar:vertical {
-                    background-color: #f1f3f4;
-                    width: 14px;
-                    border-radius: 7px;
-                }
-                QScrollBar::handle:vertical {
-                    background-color: #dadce0;
-                    border-radius: 7px;
-                    min-height: 30px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background-color: #bdc1c6;
-                }
-                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                    height: 0px;
-                }
-                QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #3498db, stop:1 #2980b9);
-                    color: white;
-                    border: none;
-                    padding: 12px 25px;
-                    border-radius: 10px;
-                    font-size: 14px;
-                    font-weight: bold;
-                    min-width: 120px;
-                }
-                QPushButton:hover {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #2980b9, stop:1 #1f5f8b);
-                }
-                QPushButton:pressed {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #1f5f8b, stop:1 #154360);
-                }
-            """)
-            
-            layout = QVBoxLayout(result_dialog)
-            layout.setSpacing(20)
-            layout.setContentsMargins(30, 30, 30, 30)
-            
-            # Başlık
-            title_label = QLabel("🔍 Kapsamlı Yalan Tespit Analizi")
-            title_label.setStyleSheet("""
-                font-size: 24px;
-                font-weight: bold;
-                color: #2c3e50;
-                text-align: center;
-                padding: 15px;
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 rgba(52, 152, 219, 0.1), stop:1 rgba(52, 152, 219, 0.05));
-                border-radius: 15px;
-                border-left: 5px solid #3498db;
-            """)
-            title_label.setAlignment(Qt.AlignCenter)
-            layout.addWidget(title_label)
-            
-            text_edit = QTextEdit()
-            text_edit.setHtml(mesaj)
-            text_edit.setReadOnly(True)
-            layout.addWidget(text_edit)
-            
-            # Butonlar
-            button_layout = QHBoxLayout()
-            button_layout.setSpacing(20)
-            
-            close_button = QPushButton("❌ Kapat")
-            close_button.clicked.connect(result_dialog.accept)
-            close_button.setStyleSheet("""
-                QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #6c757d, stop:1 #495057);
-                }
-                QPushButton:hover {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #495057, stop:1 #343a40);
-                }
-            """)
-            button_layout.addWidget(close_button)
-            
-            # Sonuçları kaydet butonu
-            save_button = QPushButton("💾 Sonuçları Kaydet")
-            save_button.clicked.connect(lambda: self.sonuclari_kaydet(mesaj))
-            save_button.setStyleSheet("""
-                QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #28a745, stop:1 #20c997);
-                }
-                QPushButton:hover {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #20c997, stop:1 #17a2b8);
-                }
-            """)
-            button_layout.addWidget(save_button)
-            
-            layout.addLayout(button_layout)
-            
-            result_dialog.exec_()
+            self.sonuc_penceresi_goster(mesaj, genel_sonuclar)
             
         except Exception as e:
             QMessageBox.critical(self, "Hata", f"Sonuçlar hesaplanırken bir hata oluştu: {str(e)}")
+
+    def sonuc_penceresi_goster(self, mesaj, genel_sonuclar):
+        """Analiz raporunu özet kartları ve okunaklı rapor ile ayrı bir pencerede gösterir."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Analiz Sonuçları")
+        dlg.resize(1100, 860)
+
+        layout = QVBoxLayout(dlg)
+        layout.setSpacing(16)
+        layout.setContentsMargins(28, 24, 28, 24)
+
+        # Başlık + kullanıcı özeti
+        baslik = QLabel("📊 Analiz Sonuçları")
+        baslik.setObjectName("baslik")
+        layout.addWidget(baslik)
+        cinsiyet = ['Erkek', 'Kadın'][self.saklanan_cinsiyet] if self.saklanan_cinsiyet in (0, 1) else ''
+        alt = QLabel(f"{self.saklanan_ad_soyad}  •  {self.saklanan_yas} yaş  •  {self.saklanan_meslek}  •  {cinsiyet}"
+                     f"  •  {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+        alt.setObjectName("altBaslik")
+        layout.addWidget(alt)
+
+        # Genel karar ve özet kartları
+        if genel_sonuclar:
+            doru_sayisi = sum(1 for s in genel_sonuclar if s['genel_tahmin'] == 'doru')
+            yalan_sayisi = sum(1 for s in genel_sonuclar if s['genel_tahmin'] == 'yalan')
+            ort_guven = sum(s['genel_güven'] for s in genel_sonuclar) / len(genel_sonuclar)
+            doru_kazandi = doru_sayisi > yalan_sayisi
+            if doru_kazandi:
+                renk, metin_renk, arka = tema.YESIL, "#4ade80", "rgba(34, 197, 94, 0.14)"
+                karar_metni = "✅  GENEL KARAR: DOĞRU SÖYLÜYORSUNUZ"
+            else:
+                renk, metin_renk, arka = tema.KIRMIZI, "#f87171", "rgba(239, 68, 68, 0.14)"
+                karar_metni = "⚠️  GENEL KARAR: YALAN SÖYLÜYORSUNUZ"
+            karar = QLabel(karar_metni)
+            karar.setObjectName("karar")
+            karar.setAlignment(Qt.AlignCenter)
+            karar.setStyleSheet(f"background: {arka}; border: 1px solid {renk}; color: {metin_renk}; "
+                                f"font-size: 22px; font-weight: 700;")
+            layout.addWidget(karar)
+
+            kartlar = QHBoxLayout()
+            kartlar.setSpacing(14)
+            for etiket, deger, renk_k in [
+                ("TOPLAM SORU", str(len(genel_sonuclar)), tema.METIN),
+                ("DOĞRU", str(doru_sayisi), "#4ade80"),
+                ("YALAN", str(yalan_sayisi), "#f87171"),
+                ("ORT. GÜVEN", f"%{ort_guven * 100:.0f}", tema.TURKUAZ),
+            ]:
+                kart = QLabel(f"<div style='color:{tema.SOLUK}; font-size:11px; font-weight:700; "
+                              f"letter-spacing:1px;'>{etiket}</div>"
+                              f"<div style='color:{renk_k}; font-size:28px; font-weight:700;'>{deger}</div>")
+                kart.setObjectName("istatKart")
+                kartlar.addWidget(kart, 1)
+            layout.addLayout(kartlar)
+
+        # Ayrıntılı rapor
+        text_edit = QTextEdit()
+        text_edit.setHtml(tema.rapor_html(mesaj))
+        text_edit.setReadOnly(True)
+        layout.addWidget(text_edit, 1)
+
+        uyari = QLabel("Not: Yüz ifadesinden yalan tespiti bilimsel olarak kesin değildir; "
+                       "sonuçlar yalnızca bir araştırma prototipinin çıktısıdır.")
+        uyari.setObjectName("uyari")
+        uyari.setWordWrap(True)
+        layout.addWidget(uyari)
+
+        # Butonlar
+        buton_layout = QHBoxLayout()
+        buton_layout.setSpacing(12)
+        buton_layout.addStretch()
+        kapat = QPushButton("Kapat")
+        kapat.setObjectName("ikincil")
+        kapat.setMinimumWidth(130)
+        kapat.clicked.connect(dlg.accept)
+        buton_layout.addWidget(kapat)
+        kaydet = QPushButton("💾  Sonuçları Kaydet")
+        kaydet.setObjectName("basari")
+        kaydet.setMinimumWidth(190)
+        kaydet.clicked.connect(lambda: self.sonuclari_kaydet(mesaj))
+        buton_layout.addWidget(kaydet)
+        layout.addLayout(buton_layout)
+
+        dlg.exec_()
 
     def sonuclari_kaydet(self, mesaj):
         """Analiz sonuçlarını dosyaya kaydeder"""

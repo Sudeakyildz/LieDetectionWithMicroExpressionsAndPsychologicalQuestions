@@ -86,6 +86,7 @@ python main.py
 | Dosya / Klasör | Açıklama |
 |----------------|----------|
 | `main.py` | Ana uygulama (PyQt5, kamera, 5 analiz birleşimi) |
+| `tema.py` | Arayüz teması (renkler, QSS stil sayfası, rapor HTML'i) |
 | `model_egit.py` | Mikro ifade regresyon modeli eğitimi |
 | `veri_hazirla.py` | Dataset'ten duygu vektörleri → CSV |
 | `referans_dagilimlari.py` | Soru bazlı doğru/yalan referans dağılımları |
