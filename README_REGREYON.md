@@ -5,10 +5,12 @@ Bu proje, yapay sinir ağları ve regresyon teknikleri kullanarak mikro ifadeler
 ## 📋 Özellikler
 
 - **Regresyon Tabanlı Analiz**: 0-1 arası yalan olasılığı tahmini
-- **3 Farklı Analiz Yöntemi**:
-  1. Psikolojik Analiz (%35 ağırlık)
-  2. Mikro İfade Analizi - Regresyon (%35 ağırlık)
-  3. Dataset Yüz İfadesi Analizi (%30 ağırlık)
+- **5 Farklı Analiz Yöntemi** (ağırlıklı oylama):
+  1. Psikolojik Analiz (%25)
+  2. Mikro İfade Analizi - Regresyon (%25)
+  3. Dataset Yüz İfadesi Analizi (%20)
+  4. Demo Referans Analizi (%15)
+  5. Yüz Referansı (%15)
 - **Gerçek Zamanlı Kamera Analizi**
 - **Modern PyQt5 Arayüzü**
 
@@ -68,6 +70,7 @@ Regresyon modeli şu metriklerle değerlendirilir:
 ### Model Dosyaları
 - `mikro_ifade_model_regresyon.keras`: Eğitilmiş model
 - `egitim_verisi_regresyon.csv`: İşlenmiş veri
+- `scaler_parametreleri.json`: Eğitimde kullanılan ölçekleme parametreleri
 
 ## 🎯 Analiz Sonuçları
 
@@ -92,8 +95,13 @@ Her soru için şu bilgiler gösterilir:
 
 ### Veri İşleme
 - **Normalizasyon**: 0-1 arası ölçekleme
-- **Standardizasyon**: Z-score normalizasyonu
-- **Veri Bölme**: %80 eğitim, %20 test
+- **Standardizasyon**: Z-score; parametreler `scaler_parametreleri.json` dosyasına kaydedilir ve `main.py` tahmin sırasında aynı ölçeklemeyi uygular
+- **Veri Bölme**: %80 eğitim, %20 test. `grup` sütunu (soru+durum klasörü) varsa bölme grup bazlıdır; böylece aynı videonun kareleri hem eğitimde hem testte yer almaz (veri sızıntısı önlenir)
+
+## ⚠️ Sınırlamalar
+
+- Yüz duygusundan yalan tespiti bilimsel olarak güvenilir bir yöntem değildir; proje bir araştırma/eğitim prototipidir.
+- Veri seti küçüktür (15 soru x 2 durum x 15 kare) ve tek kişiden rol yapılarak toplanmıştır. Model genellenebilir sonuç vermez.
 
 ## 📝 Notlar
 

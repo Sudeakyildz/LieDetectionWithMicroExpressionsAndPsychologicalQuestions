@@ -16,7 +16,8 @@ print("📂 Veri yükleniyor...")
 df = pd.read_csv('egitim_verisi_regresyon.csv')
 
 # Özellikler ve hedef
-X = df.drop('yalan_orani', axis=1).values
+gruplar = df['grup'].values if 'grup' in df.columns else None
+X = df.drop(['yalan_orani', 'grup'], axis=1, errors='ignore').values
 y = df['yalan_orani'].values
 
 print(f"📊 Veri Şekli: {X.shape}")
@@ -27,9 +28,20 @@ print(f"   Ortalama: {y.mean():.3f}")
 print(f"   Std: {y.std():.3f}")
 
 # Veriyi eğitim/test olarak böl
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=None
-)
+if gruplar is not None:
+    # Aynı videonun ardışık kareleri hem eğitimde hem testte olursa sonuç şişer (veri sızıntısı).
+    # Bu yüzden bölme klasör (soru+durum) bazında yapılır.
+    from sklearn.model_selection import GroupShuffleSplit
+    gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    train_idx, test_idx = next(gss.split(X, y, groups=gruplar))
+    X_train, X_test, y_train, y_test = X[train_idx], X[test_idx], y[train_idx], y[test_idx]
+    print("🔒 Grup bazlı bölme kullanıldı (sızıntı önlendi)")
+else:
+    print("⚠️ CSV'de 'grup' sütunu yok: rastgele bölme kullanılıyor, test skoru iyimser olabilir.")
+    print("   Düzeltmek için önce 'python veri_hazirla.py' çalıştırın.")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=None
+    )
 
 print(f"\n📈 Eğitim Seti: {X_train.shape[0]} örnek")
 print(f"📈 Test Seti: {X_test.shape[0]} örnek")
@@ -38,6 +50,12 @@ print(f"📈 Test Seti: {X_test.shape[0]} örnek")
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
+
+# Scaler parametrelerini kaydet: main.py tahmin sırasında aynı ölçeklemeyi uygular
+import json
+with open('scaler_parametreleri.json', 'w', encoding='utf-8') as f:
+    json.dump({'mean': scaler.mean_.tolist(), 'scale': scaler.scale_.tolist()}, f)
+print("💾 Scaler kaydedildi: scaler_parametreleri.json")
 
 # Regresyon modeli oluştur
 print("\n🏗️ Model oluşturuluyor...")

@@ -1,4 +1,15 @@
 import sys
+# Emoji'li print'ler Windows'ta (cp1254 vb.) çökmesin
+for _akis in (sys.stdout, sys.stderr):
+    try:
+        _akis.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+# TensorFlow, Windows'ta PyQt5/OpenCV'den ÖNCE yüklenmelidir; aksi halde DLL çakışması olur
+import tensorflow as tf
+# Standalone Keras 3, deepface import edilmeden ÖNCE yüklenmeli (deepface TF_USE_LEGACY_KERAS=1 ayarlıyor
+# ve bu, Keras 3 ile kaydedilmiş .keras modelinin yüklenmesini bozuyor)
+import keras
 import cv2
 import pandas as pd
 import numpy as np
@@ -11,8 +22,6 @@ import os
 from collections import Counter
 import json
 import warnings
-import tensorflow as tf
-from tensorflow import keras
 
 # Uyarıları bastır
 warnings.filterwarnings('ignore')
@@ -449,8 +458,19 @@ class YalanTespitSistemi(QMainWindow):
             except Exception as e:
                 print(f"⚠️ Regresyon modeli yüklenemedi: {e}")
                 self.mikro_ifade_model = None
-            # Not: scaler yüklemesi için gerekirse pickle ile scaler dosyası eklenebilir
-            self.scaler = None  # Eğer scaler dosyası varsa burada yüklenmeli
+            # Eğitimde kullanılan StandardScaler parametreleri (model_egit.py üretir)
+            self.scaler_ort = None
+            self.scaler_std = None
+            try:
+                with open('scaler_parametreleri.json', 'r', encoding='utf-8') as f:
+                    sp = json.load(f)
+                self.scaler_ort = np.array(sp['mean'], dtype=np.float32)
+                self.scaler_std = np.array(sp['scale'], dtype=np.float32)
+                print("✅ Scaler parametreleri yüklendi")
+            except Exception as e:
+                print(f"⚠️ Scaler parametreleri yüklenemedi (ham vektör kullanılacak): {e}")
+            # Dataset referans duygu dağılımları için önbellek (soru_no -> sonuç)
+            self._dataset_ref_cache = {}
             
             # 3. Referans dağılımları
             try:
@@ -484,7 +504,14 @@ class YalanTespitSistemi(QMainWindow):
                 beklenen_durum = soru_data['evet_durumu']
             else:  # Hayır
                 beklenen_durum = soru_data['hayir_durumu']
-            
+
+            # CSV'deki "dogru"/"yalan" etiketini uygulama içi "doru"/"yalan" etiketine çevir
+            beklenen_durum = str(beklenen_durum).strip().lower()
+            if beklenen_durum in ("dogru", "doğru", "doru"):
+                beklenen_durum = "doru"
+            else:
+                beklenen_durum = "yalan"
+
             # Doğruluk oranı hesapla (basit mantık)
             if beklenen_durum == "doru":
                 dogruluk_orani = 0.85  # %85 doğru olma ihtimali
@@ -539,10 +566,10 @@ class YalanTespitSistemi(QMainWindow):
             if self.mikro_ifade_model is not None:
                 # Ortalama duygu vektörünü al
                 ort_vektor = np.mean(np.array(duygu_vektorleri), axis=0).reshape(1, -1)
-                # Eğer scaler varsa uygula (şu an yok, gerekirse eklenir)
-                # if self.scaler is not None:
-                #     ort_vektor = self.scaler.transform(ort_vektor)
-                yalan_olasiligi = float(self.mikro_ifade_model.predict(ort_vektor)[0][0])
+                # Eğitimdeki ölçeklemeyi uygula
+                if self.scaler_ort is not None and self.scaler_std is not None:
+                    ort_vektor = (ort_vektor - self.scaler_ort) / self.scaler_std
+                yalan_olasiligi = float(self.mikro_ifade_model.predict(ort_vektor, verbose=0)[0][0])
                 regresyon_yuzde = yalan_olasiligi * 100
                 regresyon_kullanildi = True
                 if yalan_olasiligi > 0.5:
@@ -667,54 +694,38 @@ class YalanTespitSistemi(QMainWindow):
                 oran = test_counter.get(duygu, 0) / len(test_duygular)
                 test_dagilim.append(oran)
             
-            # Dataset'teki doğru ve yalan görüntülerini analiz et
-            dogru_duygular = []
-            yalan_duygular = []
-            
-            # Doğru klasöründeki görüntüleri analiz et
-            dogru_files = [f for f in os.listdir(dogru_path) if f.endswith('.jpg')]
-            for file in dogru_files[:5]:  # İlk 5 görüntüyü al
-                try:
-                    img_path = os.path.join(dogru_path, file)
-                    result = DeepFace.analyze(img_path, actions=['emotion'], enforce_detection=False)
-                    if isinstance(result, list):
-                        emotion = result[0]['dominant_emotion']
-                    else:
-                        emotion = result['dominant_emotion']
-                    dogru_duygular.append(emotion)
-                except Exception as e:
-                    continue
-            
-            # Yalan klasöründeki görüntüleri analiz et
-            yalan_files = [f for f in os.listdir(yalan_path) if f.endswith('.jpg')]
-            for file in yalan_files[:5]:  # İlk 5 görüntüyü al
-                try:
-                    img_path = os.path.join(yalan_path, file)
-                    result = DeepFace.analyze(img_path, actions=['emotion'], enforce_detection=False)
-                    if isinstance(result, list):
-                        emotion = result[0]['dominant_emotion']
-                    else:
-                        emotion = result['dominant_emotion']
-                    yalan_duygular.append(emotion)
-                except Exception as e:
-                    continue
-            
-            if not dogru_duygular or not yalan_duygular:
+            # Dataset referans dağılımları soru başına bir kez hesaplanıp önbelleğe alınır
+            # (her cevapta DeepFace'i tekrar çalıştırmak çok yavaştı)
+            if soru_str not in self._dataset_ref_cache:
+                def klasor_duygulari(klasor):
+                    duygular = []
+                    dosyalar = sorted(f for f in os.listdir(klasor) if f.endswith('.jpg'))
+                    for file in dosyalar[:5]:  # İlk 5 görüntüyü al
+                        try:
+                            result = DeepFace.analyze(os.path.join(klasor, file), actions=['emotion'], enforce_detection=False)
+                            if isinstance(result, list):
+                                result = result[0]
+                            duygular.append(result['dominant_emotion'])
+                        except Exception:
+                            continue
+                    return duygular
+
+                dogru_duygular = klasor_duygulari(dogru_path)
+                yalan_duygular = klasor_duygulari(yalan_path)
+                if not dogru_duygular or not yalan_duygular:
+                    self._dataset_ref_cache[soru_str] = None
+                else:
+                    dogru_counter = Counter(dogru_duygular)
+                    yalan_counter = Counter(yalan_duygular)
+                    self._dataset_ref_cache[soru_str] = (
+                        [dogru_counter.get(d, 0) / len(dogru_duygular) for d in duygu_etiketleri],
+                        [yalan_counter.get(d, 0) / len(yalan_duygular) for d in duygu_etiketleri],
+                    )
+
+            if self._dataset_ref_cache[soru_str] is None:
                 return None
-            
-            # Dataset dağılımlarını hesapla
-            dogru_counter = Counter(dogru_duygular)
-            yalan_counter = Counter(yalan_duygular)
-            
-            dogru_dataset_dagilim = []
-            yalan_dataset_dagilim = []
-            
-            for duygu in duygu_etiketleri:
-                dogru_oran = dogru_counter.get(duygu, 0) / len(dogru_duygular)
-                yalan_oran = yalan_counter.get(duygu, 0) / len(yalan_duygular)
-                dogru_dataset_dagilim.append(dogru_oran)
-                yalan_dataset_dagilim.append(yalan_oran)
-            
+            dogru_dataset_dagilim, yalan_dataset_dagilim = self._dataset_ref_cache[soru_str]
+
             # Test dağılımı ile karşılaştır
             dogru_benzerlik = self.dagilim_benzerligi_hesapla(test_dagilim, dogru_dataset_dagilim)
             yalan_benzerlik = self.dagilim_benzerligi_hesapla(test_dagilim, yalan_dataset_dagilim)

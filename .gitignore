@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.idea/
+.vscode/
+mikro_ifade_model_weights.h5

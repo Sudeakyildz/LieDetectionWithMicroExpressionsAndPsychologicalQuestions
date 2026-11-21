@@ -2,8 +2,9 @@ PyQt5
 opencv-python
 numpy
 pandas==2.1.4
-deepface==0.0.79
-tensorflow
+deepface>=0.0.93
+tensorflow>=2.16
+tf-keras
 scikit-learn
 matplotlib
 tqdm 

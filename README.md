@@ -92,9 +92,16 @@ python main.py
 | `veri_toplama_arayuz.py` | Veri toplama arayüzü |
 | `psikolojik_sorular_yeni.csv` | Sorular ve Evet/Hayır etiketleri |
 | `dataset/1/soru{N}_dogru/`, `soru{N}_yalan/` | Soru bazlı yüz görüntüleri |
+| `scaler_parametreleri.json` | Regresyon modelinin girdi ölçekleme parametreleri |
 | `mikro_ifade_data/` | Demo görseli vb. |
 
+> **Not:** `Project_Summary.md` ve `Security_System_*` dosyaları bu projeden bağımsız, ayrı bir güvenlik sistemi projesine aittir.
+
 Detaylı **model mimarisi, eğitim ve metrikler** için: [README_REGREYON.md](README_REGREYON.md)
+
+## ⚠️ Sınırlamalar
+
+Yüz duygusundan yalan tespiti bilimsel olarak güvenilir değildir; bu proje bir araştırma/eğitim prototipidir ve gerçek kararlar için kullanılmamalıdır.
 
 ---
 

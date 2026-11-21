@@ -11,6 +11,7 @@ print("🔍 Dataset'ten duygu vektörleri çıkarılıyor...")
 duygu_etiketleri = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
 veriler = []
 etiketler = []
+gruplar = []  # Her karenin geldiği klasör (grup bazlı train/test bölmesi için)
 
 # Dataset klasörlerini dinamik olarak bul
 dataset_path = "dataset/1"
@@ -68,6 +69,7 @@ for soru_no in sorted(mevcut_sorular):
                 
                 veriler.append(vektor)
                 etiketler.append(label)
+                gruplar.append(f"soru{soru_no}_{durum}")
                 
             except Exception as e:
                 print(f"   ❌ Hata: {img_path} - {e}")
@@ -82,6 +84,7 @@ if len(veriler) == 0:
 # DataFrame oluştur
 df = pd.DataFrame(veriler, columns=duygu_etiketleri)
 df['yalan_orani'] = etiketler
+df['grup'] = gruplar
 
 # İstatistikler
 print(f"\n📈 Veri Dağılımı:")
